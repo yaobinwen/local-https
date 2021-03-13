@@ -4,5 +4,5 @@
     ansible_become: yes
 
   roles:
-    - role: geerlingguy.nginx
+    - role: nginxinc.nginx
     - role: cert-key
