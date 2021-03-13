@@ -1,0 +1,2 @@
+server_cert_dir: /etc/local-https
+server_key_dir: /etc/local-https
