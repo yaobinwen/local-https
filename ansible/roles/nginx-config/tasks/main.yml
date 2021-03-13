@@ -1,0 +1,31 @@
+- name: Generate the OpenSSL Diffie-Hellman parameters file.
+  block:
+    - name: Generate a new OpenSSL Diffie-Hellman parameters file.
+      when: not use_existing_dh_param_file
+      community.crypto.openssl_dhparam:
+        path: /etc/nginx/dhparam0496.pem
+        select_crypto_backend: cryptography
+        size: 4096
+        state: present
+
+    # The DH parameters can be made public.
+    # See: https://security.stackexchange.com/a/94397/80050
+    - name: Copy the existing OpenSSL Diffie-Hellman parameters file.
+      when: use_existing_dh_param_file
+      copy:
+        src: "dhparam4096.pem"
+        dest: "/etc/nginx"
+        owner: "0"
+        group: "0"
+        mode: "0o644"
+
+- name: Copy the nginx configuration files to "/etc/nginx/conf.d".
+  copy:
+    src: "{{item}}"
+    dest: "/etc/nginx/conf.d"
+    owner: "0"
+    group: "0"
+    mode: "0o644"
+  loop:
+    - local-https.conf
+    - local-https-ssl-params.conf
