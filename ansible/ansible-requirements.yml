@@ -1,0 +1,15 @@
+# https://galaxy.ansible.com/docs/using/installing.html#installing-multiple-roles-from-a-file
+# https://docs.ansible.com/ansible/latest/user_guide/collections_using.html#install-multiple-collections-with-a-requirements-file
+
+# Run: ansible-galaxy install -r ansible-requirements.yml
+
+roles:
+  - name: geerlingguy.apache
+    version: 3.1.4
+
+  - name: geerlingguy.nginx
+    version: 2.8.0
+
+collections:
+  - name: community.crypto
+    version: 1.4.0

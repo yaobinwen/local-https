@@ -1,0 +1,5 @@
+- name: Set up the basic HTTPS environment in the targets.
+  hosts: https_servers
+  roles:
+    - role: geerlingguy.nginx
+      become: yes
