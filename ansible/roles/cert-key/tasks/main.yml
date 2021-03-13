@@ -1,0 +1,25 @@
+- name: Create the folders.
+  file:
+    path: "{{item}}"
+    state: directory
+    owner: "0"
+    group: "0"
+    mode: "0o755"
+  loop:
+    - "{{server_cert_dir}}"
+    - "{{server_key_dir}}"
+
+- name: Copy the server certificate to {{server_cert_dir}}.
+  copy:
+    src: "{{item.src}}"
+    dest: "{{item.dest}}"
+    owner: "0"
+    group: "0"
+    mode: "{{item.mode}}"
+  loop:
+    - src: vm.local-https.io.pem
+      dest: "{{server_cert_dir}}"
+      mode: "0o644"
+    - src: vm.local-https.io-key.pem
+      dest: "{{server_key_dir}}"
+      mode: "0o600"
