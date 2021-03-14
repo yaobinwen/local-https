@@ -7,12 +7,12 @@ roles:
   - name: geerlingguy.apache
     version: 3.1.4
 
+collections:
   # `geerlingguy.nginx` asks to consider the official role.
   # https://github.com/geerlingguy/ansible-role-nginx
-  - name: nginxinc.nginx
-    version: 0.19.1
+  - name: nginxinc.nginx_core
+    version: 0.3.0
 
-collections:
   - name: community.crypto
     version: 1.4.0
 

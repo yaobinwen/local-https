@@ -4,5 +4,125 @@
     ansible_become: yes
 
   roles:
+    - role: root-ca
     - role: cert-key
-    - role: nginxinc.nginx
+    - role: nginxinc.nginx_core.nginx
+    - role: nginxinc.nginx_core.nginx_config
+      vars:
+        nginx_config_http_template_enable: true
+        nginx_config_http_template:
+          # NOTE(ywen): Well, probably it would be easier to just copy a file.
+          default:
+            template_file: http/default.conf.j2
+            conf_file_name: default.conf
+            conf_file_location: /etc/nginx/conf.d/
+            servers:
+              server0:
+                listen:
+                  listen_ipv4:
+                    ip: "*"
+                    port: 80
+                    ssl: false
+                    opts: []
+                server_name: vm.xmap.io
+                web_server:
+                  locations:
+                    default:
+                      location: /
+                      returns:
+                        return302:
+                          code: 302
+                          url: https://$host$request_uri
+              server1:
+                listen:
+                  listen_ipv4:
+                    ip: "*"  # Wrap in square brackets for IPv6 addresses
+                    port: 443
+                    ssl: true
+                    opts: []  # Listen opts like http2 which will be added (ssl is automatically added if you specify 'ssl:').
+                ssl:
+                  cert: /etc/local-https/nginx/vm.local-https.io.pem
+                  key: /etc/local-https/nginx/vm.local-https.io-key.pem
+                  dhparam: /etc/local-https/nginx/dhparam4096.pem
+                  protocols: TLSv1 TLSv1.1 TLSv1.2
+                  ciphers: HIGH:!aNULL:!MD5
+                  prefer_server_ciphers: true
+                  session_cache: none
+                  session_timeout: 5m
+                  disable_session_tickets: false
+                  trusted_cert: /usr/local/share/ca-certificates/local-https/rootCA.pem
+                  stapling: false
+                  stapling_verify: false
+                  buffer_size: 16k
+                  ecdh_curve: auto
+                server_name: vm.xmap.io
+                include_files: []
+                http_error_pages: {}
+                error_page: /usr/share/nginx/html
+                # access_log: "off" # Cancels all access_log directives on the current level
+                access_log:
+                  - name: main
+                    location: /var/log/nginx/access.log
+                error_log:
+                  location: /var/log/nginx/error.log
+                  level: warn
+                root: /usr/share/nginx/html
+                # https_redirect: $host
+                autoindex: false
+                auth_basic: null
+                auth_basic_user_file: null
+                try_files: $uri $uri/index.html $uri.html =404
+                # auth_request: /auth
+                # auth_request_set:
+                #   name: $auth_user
+                #   value: $upstream_http_x_user
+                client_max_body_size: 1m
+                proxy_hide_headers: []  # A list of headers which shouldn't be passed to the application
+                add_headers:
+                  # strict_transport_security:
+                  #   name: Strict-Transport-Security
+                  #   value: max-age=15768000; includeSubDomains
+                  #   always: true
+                  x_frame_options:
+                    name: X-Frame-Options
+                    value: DENY
+                    always: false
+                  x_content_type_options:
+                    name: X-Content-Type-Options
+                    value: nosniff
+                    always: false
+                web_server:
+                  locations:
+                    default:
+                      location: /
+                      # app_protect:  # Optional -- Configure NGINX App Protect
+                      #   enable: false  # Optional
+                      #   policy_file: path  # Optional
+                      #   security_log_enable: false  # Optional
+                      #   security_log:  # Optional
+                      #     path: path  # Required
+                      #     destination: dest  # Required
+                      include_files: []
+                      proxy_hide_headers: []  # A list of headers which shouldn't be passed to the application
+                      html_file_location: /usr/share/nginx/html
+                      html_file_name: index.html
+                      autoindex: false
+                      auth_basic: null
+                      auth_basic_user_file: null
+                      try_files: $uri $uri/index.html $uri.html =404
+                      # allows:
+                      #   - 192.168.1.0/24
+                      # denies:
+                      #   - all
+                      # auth_request: /auth
+                      # auth_request_set:
+                      #   name: $auth_user
+                      #   value: $upstream_http_x_user
+                      client_max_body_size: 1m
+                      # returns:
+                      #   return302:
+                      #     code: 302
+                      #     url: https://sso.somehost.local/?url=https://$http_host$request_uri
+
+                      # custom_options: []
+                  http_demo_conf: false
