@@ -1,4 +1,6 @@
-server_cert_dir: /etc/local-https
-server_key_dir: /etc/local-https
+local_https_dir: /etc/local-https
+nginx_config_dir: "{{local_https_dir}}/nginx"
+server_cert_dir: "{{nginx_config_dir}}"
+server_key_dir: "{{nginx_config_dir}}"
 
 use_existing_dh_param_file: yes

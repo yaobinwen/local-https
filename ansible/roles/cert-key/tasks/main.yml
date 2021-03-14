@@ -29,7 +29,7 @@
     - name: Generate a new OpenSSL Diffie-Hellman parameters file.
       when: not use_existing_dh_param_file
       community.crypto.openssl_dhparam:
-        path: /etc/nginx/dhparam0496.pem
+        path: "{{nginx_config_dir}}/dhparam0496.pem"
         select_crypto_backend: cryptography
         size: 4096
         state: present
@@ -40,15 +40,15 @@
       when: use_existing_dh_param_file
       copy:
         src: "dhparam4096.pem"
-        dest: "/etc/nginx"
+        dest: "{{nginx_config_dir}}"
         owner: "0"
         group: "0"
         mode: "0o644"
 
-- name: Copy the nginx configuration files to "/etc/nginx/conf.d".
+- name: Copy the nginx configuration files to {{nginx_config_dir}}.
   copy:
     src: "{{item}}"
-    dest: "/etc/nginx/conf.d"
+    dest: "{{nginx_config_dir}}"
     owner: "0"
     group: "0"
     mode: "0o644"
