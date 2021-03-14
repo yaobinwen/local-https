@@ -1,0 +1,32 @@
+- name: Update the APT cache.
+  apt:
+    update_cache: yes
+    cache_valid_time: "900"
+
+- name: Make sure we have `ca-certificates` installed.
+  apt:
+    name:
+      - ca-certificates
+    state: latest
+
+- name: Create {{root_ca_dir}}.
+  file:
+    path: "{{root_ca_dir}}"
+    state: directory
+    mode: "0o755"
+    owner: "0"
+    group: "0"
+
+- name: Copy the root CA certificate to the target machine.
+  copy:
+    src: rootCA.pem
+    dest: "{{root_ca_dir}}"
+    mode: "0o644"
+    owner: "0"
+    group: "0"
+
+- name: Update the CA certificates.
+  when: update_ca_certs | bool
+  command:
+    argv:
+      - /usr/sbin/update-ca-certificates
