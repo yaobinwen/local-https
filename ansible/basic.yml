@@ -24,7 +24,7 @@
                     port: 80
                     ssl: false
                     opts: []
-                server_name: vm.xmap.io
+                server_name: vm.local-https.io
                 web_server:
                   locations:
                     default:
@@ -55,7 +55,7 @@
                   stapling_verify: false
                   buffer_size: 16k
                   ecdh_curve: auto
-                server_name: vm.xmap.io
+                server_name: vm.local-https.io
                 include_files: []
                 http_error_pages: {}
                 error_page: /usr/share/nginx/html
