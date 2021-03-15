@@ -20,7 +20,8 @@
 - name: Copy the root CA certificate to the target machine.
   copy:
     src: rootCA.pem
-    dest: "{{root_ca_dir}}"
+    # NOTE(ywen): `update-ca-certificates` seems to only recognize `.crt` files.
+    dest: "{{root_ca_dir}}/rootCA.crt"
     mode: "0o644"
     owner: "0"
     group: "0"

@@ -50,7 +50,7 @@
                   session_cache: none
                   session_timeout: 5m
                   disable_session_tickets: false
-                  trusted_cert: /usr/local/share/ca-certificates/local-https/rootCA.pem
+                  trusted_cert: /usr/local/share/ca-certificates/local-https/rootCA.crt
                   stapling: false
                   stapling_verify: false
                   buffer_size: 16k

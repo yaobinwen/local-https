@@ -1,0 +1,7 @@
+- name: Set up the client that accesses the local HTTPS server.
+  hosts: https_clients
+  vars:
+    ansible_become: yes
+
+  roles:
+    - role: root-ca

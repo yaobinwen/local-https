@@ -4,7 +4,13 @@ all:
       ansible_host: "10.0.0.247"
       ansible_user: vagrant
       ansible_python_interpreter: /usr/bin/python3
+    localhost:
+      ansible_connection: local
+      ansible_python_interpreter: /usr/bin/python3
   children:
     https_servers:
       hosts:
         vm:
+    https_clients:
+      hosts:
+        localhost
