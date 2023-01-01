@@ -1,0 +1,14 @@
+- name: Set up ywen root CA.
+  hosts: root_ca_hosts
+  gather_facts: no
+
+  vars_prompt:
+    - name: private_key_passphrase
+      prompt: Root CA private key passphrase
+      private: true
+      confirm: true
+
+  roles:
+    - role: root-ca
+      vars:
+        pki_path: /var/lib/ywen_pki

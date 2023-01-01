@@ -1,0 +1,27 @@
+- name: Set up server CA.
+  hosts: server_ca_hosts
+  gather_facts: no
+
+  vars_prompt:
+    - name: private_key_passphrase
+      prompt: server CA private key passphrase
+      private: true
+      confirm: true
+
+    - name: intermediate_ca_private_key_passphrase
+      prompt: intermediate CA private key passphrase
+      private: true
+      confirm: false
+
+  tasks:
+    - include_role:
+        name: server
+        tasks_from: create-ca.yml
+      vars:
+        pki_path: /var/lib/ywen_pki
+
+    - include_role:
+        name: server
+        tasks_from: sign-cert.yml
+      vars:
+        pki_path: /var/lib/ywen_pki

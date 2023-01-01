@@ -1,0 +1,10 @@
+pki_path: /var/lib/ywen_pki
+
+# `openssl_privatekey` module generates keys in PEM format.
+private_key_file_name: ca.key.pem
+private_key_size: 4096
+private_key_type: RSA
+certificate_file_name: ca.cert.pem
+certificate_valid_not_after: "+3650d"
+certificate_valid_not_before: "+0s"
+crl_file_name: ca.crl.pem

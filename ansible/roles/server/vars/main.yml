@@ -1,0 +1,2 @@
+server_ca_dir_name: server-ca
+server_ca_dir_path: "{{pki_path}}/{{server_ca_dir_name}}"

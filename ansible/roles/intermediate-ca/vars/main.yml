@@ -1,0 +1,2 @@
+intermediate_ca_dir_name: intermediate-ca
+intermediate_ca_dir_path: "{{pki_path}}/{{intermediate_ca_dir_name}}"

@@ -1,0 +1,182 @@
+- name: Create the intermediate CA directory.
+  become: yes
+  file:
+    path: "{{intermediate_ca_dir_path}}"
+    state: directory
+    owner: "0"
+    group: "0"
+    mode: "0o700"
+
+- name: Create the sub-directories for the intermediate CA.
+  become: yes
+  file:
+    path: "{{intermediate_ca_dir_path}}/{{item}}"
+    state: directory
+    owner: "0"
+    group: "0"
+    mode: "0o700"
+  loop:
+    - "certs"
+    - "crl"
+    - "csr"
+    - "newcerts"
+    - "private"
+
+- name: Create the intermediate CA database file `index.txt`.
+  become: yes
+  file:
+    path: "{{intermediate_ca_dir_path}}/index.txt"
+    state: touch
+    owner: "0"
+    group: "0"
+    mode: "0o600"
+
+# TODO(ywen): What is `serial` used for?
+- name: Create the serial number tracker for certificates.
+  become: yes
+  copy:
+    content: "1000"
+    dest: "{{intermediate_ca_dir_path}}/serial"
+    owner: "0"
+    group: "0"
+    mode: "0o600"
+
+- name: Create the CRL number tracker for CRLs.
+  become: yes
+  copy:
+    content: "1000"
+    dest: "{{intermediate_ca_dir_path}}/crlnumber"
+    owner: "0"
+    group: "0"
+    mode: "0o600"
+
+- name: Create the OpenSSL configuration for the intermediate CA.
+  become: yes
+  template:
+    src: openssl-intermediate-ca.cnf.j2
+    dest: "{{intermediate_ca_dir_path}}/openssl.cnf"
+    owner: "0"
+    group: "0"
+    mode: "0o600"
+    # TODO(ywen): Is there a way to validate OpenSSL configuration file?
+
+# https://docs.ansible.com/ansible/latest/collections/community/crypto/openssl_privatekey_module.html
+- name: Create the intermediate CA private key.
+  become: yes
+  community.crypto.openssl_privatekey:
+    # Must be "auto" per the documentation.
+    cipher: auto
+    # Whether the key should be regenerated even if it already exists.
+    force: false
+    format: auto_ignore
+    format_mismatch: regenerate
+    passphrase: "{{private_key_passphrase}}"
+    path: "{{intermediate_ca_dir_path}}/private/{{private_key_file_name}}"
+    regenerate: full_idempotence
+    return_content: false
+    select_crypto_backend: auto
+    size: "{{private_key_size}}"
+    state: present
+    type: "{{private_key_type}}"
+    unsafe_writes: false
+    owner: "0"
+    group: "0"
+    mode: "0o600"
+
+- name: Create certificate signing request (CSR) for intermediate certificate
+  become: yes
+  community.crypto.openssl_csr_pipe:
+    privatekey_passphrase: "{{private_key_passphrase}}"
+    privatekey_path: "{{intermediate_ca_dir_path}}/private/{{private_key_file_name}}"
+    common_name: ywen intermediate CA
+    use_common_name_for_san: false  # since we do not specify SANs, don't use CN as a SAN
+    basic_constraints:
+      - 'CA:TRUE'
+    basic_constraints_critical: true
+    key_usage:
+      - keyCertSign
+    key_usage_critical: true
+  register: intermediate_cert_csr
+
+- name: Create the intermediate certificate.
+  become: yes
+  community.crypto.x509_certificate:
+    csr_content: "{{intermediate_cert_csr.csr}}"
+    backup: true
+    force: false
+    path: "{{intermediate_ca_dir_path}}/certs/{{certificate_file_name}}"
+    provider: ownca
+    return_content: false
+    select_crypto_backend: auto
+    ownca_create_authority_key_identifier: true
+    ownca_create_subject_key_identifier: create_if_not_provided
+    ownca_digest: sha256
+    ownca_not_after: "{{certificate_valid_not_after}}"
+    ownca_not_before: "{{certificate_valid_not_before}}"
+    ownca_path: "{{root_ca_dir_path}}/certs/{{root_ca_certificate_file_name}}"
+    ownca_privatekey_passphrase: "{{root_ca_private_key_passphrase}}"
+    ownca_privatekey_path: "{{root_ca_dir_path}}/private/{{root_ca_private_key_file_name}}"
+    ownca_version: 3
+    state: present
+    owner: "0"
+    group: "0"
+    mode: "0o600"
+
+- name: Obtain the intermediate certificate information.
+  become: yes
+  community.crypto.x509_certificate_info:
+    path: "{{intermediate_ca_dir_path}}/certs/{{certificate_file_name}}"
+    select_crypto_backend: auto
+  register: intermediate_cert_info
+
+- name: Verify the intermediate certificate meets the expectation.
+  assert:
+    that:
+      - intermediate_cert_info.issuer.commonName == "ywen root CA"
+      - intermediate_cert_info.subject.commonName == "ywen intermediate CA"
+      # TODO(ywen): Add more asserts.
+
+- name: Verify the intermediate certificate against the root certificate.
+  become: yes
+  command:
+    argv:
+      - openssl
+      - verify
+      - "-CAfile"
+      - "{{root_ca_dir_path}}/certs/{{root_ca_certificate_file_name}}"
+      - "{{intermediate_ca_dir_path}}/certs/{{certificate_file_name}}"
+  changed_when: false
+
+- name: Concatenate the CA certificates together.
+  become: yes
+  command:
+    argv:
+      - cat
+      - "{{intermediate_ca_dir_path}}/certs/{{certificate_file_name}}"
+      - "{{root_ca_dir_path}}/certs/{{root_ca_certificate_file_name}}"
+  register: certs_cat_output
+
+- name: Create the CA certificate trust chain file.
+  become: yes
+  copy:
+    content: "{{certs_cat_output.stdout}}"
+    dest: "{{pki_path}}/ca-chain.cert.pem"
+    owner: "0"
+    group: "0"
+    mode: "0o600"
+
+- name: Create the initial Certificate Revocation Lists (CRLs).
+  become: yes
+  community.crypto.x509_crl module:
+    backup: false
+    digest: sha256
+    force: false
+    format: pem
+    group: "0"
+    mode: generate
+    owner: "0"
+    path: "{{intermediate_ca_dir_path}}/certs/{{crl_file_name}}"
+    privatekey_path: "{{intermediate_ca_dir_path}}/private/{{private_key_file_name}}"
+    privatekey_passphrase: "{{private_key_passphrase}}"
+    revoked_certificates: []  # Just created so no revoked
+    state: present

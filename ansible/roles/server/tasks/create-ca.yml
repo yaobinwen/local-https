@@ -1,0 +1,64 @@
+- name: Create the server CA directory.
+  become: yes
+  file:
+    path: "{{server_ca_dir_path}}"
+    state: directory
+    owner: "0"
+    group: "0"
+    mode: "0o700"
+
+- name: Create the sub-directories for the server CA.
+  become: yes
+  file:
+    path: "{{server_ca_dir_path}}/{{item}}"
+    state: directory
+    owner: "0"
+    group: "0"
+    mode: "0o700"
+  loop:
+    - "certs"
+    - "crl"
+    - "newcerts"
+    - "private"
+
+- name: Create the server CA database file `index.txt`.
+  become: yes
+  file:
+    path: "{{server_ca_dir_path}}/index.txt"
+    state: touch
+    owner: "0"
+    group: "0"
+    mode: "0o600"
+
+# TODO(ywen): What is `serial` used for?
+- name: Create the serial number tracker for certificates.
+  become: yes
+  copy:
+    content: "1000"
+    dest: "{{server_ca_dir_path}}/serial"
+    owner: "0"
+    group: "0"
+    mode: "0o600"
+
+# https://docs.ansible.com/ansible/latest/collections/community/crypto/openssl_privatekey_module.html
+- name: Create the server CA private key.
+  become: yes
+  community.crypto.openssl_privatekey:
+    # Must be "auto" per the documentation.
+    cipher: auto
+    # Whether the key should be regenerated even if it already exists.
+    force: false
+    format: auto_ignore
+    format_mismatch: regenerate
+    passphrase: "{{private_key_passphrase}}"
+    path: "{{server_ca_dir_path}}/private/{{private_key_file_name}}"
+    regenerate: full_idempotence
+    return_content: false
+    select_crypto_backend: auto
+    size: "{{private_key_size}}"
+    state: present
+    type: "{{private_key_type}}"
+    unsafe_writes: false
+    owner: "0"
+    group: "0"
+    mode: "0o600"

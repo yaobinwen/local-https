@@ -1,0 +1,125 @@
+- name: Create the root CA directory.
+  become: yes
+  file:
+    path: "{{root_ca_dir_path}}"
+    state: directory
+    owner: "0"
+    group: "0"
+    mode: "0o700"
+
+- name: Create the sub-directories for the root CA.
+  become: yes
+  file:
+    path: "{{root_ca_dir_path}}/{{item}}"
+    state: directory
+    owner: "0"
+    group: "0"
+    mode: "0o700"
+  loop:
+    - "certs"
+    - "crl"
+    - "newcerts"
+    - "private"
+
+- name: Create the root CA database file `index.txt`.
+  become: yes
+  file:
+    path: "{{root_ca_dir_path}}/index.txt"
+    state: touch
+    owner: "0"
+    group: "0"
+    mode: "0o600"
+
+# TODO(ywen): What is `serial` used for?
+- name: Create the serial number tracker for certificates.
+  become: yes
+  copy:
+    content: "1000"
+    dest: "{{root_ca_dir_path}}/serial"
+    owner: "0"
+    group: "0"
+    mode: "0o600"
+
+- name: Create the OpenSSL configuration for the root CA.
+  become: yes
+  template:
+    src: openssl-root-ca.cnf.j2
+    dest: "{{root_ca_dir_path}}/openssl.cnf"
+    owner: "0"
+    group: "0"
+    mode: "0o600"
+    # TODO(ywen): Is there a way to validate OpenSSL configuration file?
+
+# https://docs.ansible.com/ansible/latest/collections/community/crypto/openssl_privatekey_module.html
+- name: Create the root CA private key.
+  become: yes
+  community.crypto.openssl_privatekey:
+    # Must be "auto" per the documentation.
+    cipher: auto
+    # Whether the key should be regenerated even if it already exists.
+    force: false
+    format: auto_ignore
+    format_mismatch: regenerate
+    passphrase: "{{private_key_passphrase}}"
+    path: "{{root_ca_dir_path}}/private/{{private_key_file_name}}"
+    regenerate: full_idempotence
+    return_content: false
+    select_crypto_backend: auto
+    size: "{{private_key_size}}"
+    state: present
+    type: "{{private_key_type}}"
+    unsafe_writes: false
+    owner: "0"
+    group: "0"
+    mode: "0o600"
+
+- name: Create certificate signing request (CSR) for root certificate
+  become: yes
+  community.crypto.openssl_csr_pipe:
+    privatekey_passphrase: "{{private_key_passphrase}}"
+    privatekey_path: "{{root_ca_dir_path}}/private/{{private_key_file_name}}"
+    common_name: ywen root CA
+    use_common_name_for_san: false  # since we do not specify SANs, don't use CN as a SAN
+    basic_constraints:
+      - 'CA:TRUE'
+    basic_constraints_critical: true
+    key_usage:
+      - keyCertSign
+    key_usage_critical: true
+  register: root_cert_csr
+
+- name: Create the root certificate.
+  become: yes
+  community.crypto.x509_certificate:
+    csr_content: "{{root_cert_csr.csr}}"
+    backup: true
+    force: false
+    path: "{{root_ca_dir_path}}/certs/{{certificate_file_name}}"
+    privatekey_passphrase: "{{private_key_passphrase}}"
+    privatekey_path: "{{root_ca_dir_path}}/private/{{private_key_file_name}}"
+    provider: selfsigned
+    return_content: false
+    select_crypto_backend: auto
+    selfsigned_create_subject_key_identifier: create_if_not_provided
+    selfsigned_digest: sha256
+    selfsigned_not_after: "{{certificate_valid_not_after}}"
+    selfsigned_not_before: "{{certificate_valid_not_before}}"
+    selfsigned_version: 3
+    state: present
+    owner: "0"
+    group: "0"
+    mode: "0o600"
+
+- name: Obtain the root certificate information.
+  become: yes
+  community.crypto.x509_certificate_info:
+    path: "{{root_ca_dir_path}}/certs/{{certificate_file_name}}"
+    select_crypto_backend: auto
+  register: root_cert_info
+
+- name: Verify the root certificate meets the expectation.
+  assert:
+    that:
+      - root_cert_info.issuer.commonName == "ywen root CA"
+      - root_cert_info.subject.commonName == "ywen root CA"
+      # TODO(ywen): Add more asserts.

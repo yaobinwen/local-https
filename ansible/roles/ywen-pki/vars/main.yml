@@ -1,0 +1,2 @@
+ywen_pki_dir_name: ywen_pki
+ywen_pki_dir_path: /var/lib/{{ywen_pki_dir_name}}

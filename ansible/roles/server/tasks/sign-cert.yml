@@ -1,0 +1,62 @@
+- name: Create certificate signing request (CSR) for server certificate
+  become: yes
+  community.crypto.openssl_csr_pipe:
+    privatekey_passphrase: "{{private_key_passphrase}}"
+    privatekey_path: "{{server_ca_dir_path}}/private/{{private_key_file_name}}"
+    common_name: server CA
+    use_common_name_for_san: false  # since we do not specify SANs, don't use CN as a SAN
+    basic_constraints:
+      - 'CA:TRUE'
+    basic_constraints_critical: true
+    key_usage:
+      - keyCertSign
+    key_usage_critical: true
+  register: server_cert_csr
+
+- name: Create the server certificate.
+  become: yes
+  community.crypto.x509_certificate:
+    csr_content: "{{server_cert_csr.csr}}"
+    backup: true
+    force: false
+    path: "{{server_ca_dir_path}}/certs/{{certificate_file_name}}"
+    provider: ownca
+    return_content: false
+    select_crypto_backend: auto
+    ownca_create_authority_key_identifier: true
+    ownca_create_subject_key_identifier: create_if_not_provided
+    ownca_digest: sha256
+    ownca_not_after: "{{certificate_valid_not_after}}"
+    ownca_not_before: "{{certificate_valid_not_before}}"
+    ownca_path: "{{intermediate_ca_dir_path}}/certs/{{intermediate_ca_certificate_file_name}}"
+    ownca_privatekey_passphrase: "{{intermediate_ca_private_key_passphrase}}"
+    ownca_privatekey_path: "{{intermediate_ca_dir_path}}/private/{{intermediate_ca_private_key_file_name}}"
+    ownca_version: 3
+    state: present
+    owner: "0"
+    group: "0"
+    mode: "0o600"
+
+- name: Obtain the server certificate information.
+  become: yes
+  community.crypto.x509_certificate_info:
+    path: "{{server_ca_dir_path}}/certs/{{certificate_file_name}}"
+    select_crypto_backend: auto
+  register: server_cert_info
+
+- name: Verify the server certificate meets the expectation.
+  assert:
+    that:
+      - server_cert_info.issuer.commonName == "ywen intermediate CA"
+      - server_cert_info.subject.commonName == "server CA"
+
+- name: Verify the server certificate has a valid chain of trust.
+  become: yes
+  command:
+    argv:
+      - openssl
+      - verify
+      - -CAfile
+      - "{{pki_path}}/ca-chain.cert.pem"
+      - "{{server_ca_dir_path}}/certs/{{certificate_file_name}}"
+  changed_when: false

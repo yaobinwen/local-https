@@ -1,0 +1,8 @@
+- name: Create ywen PKI directory.
+  become: yes
+  file:
+    path: "{{ywen_pki_dir_path}}"
+    state: directory
+    owner: "0"
+    group: "0"
+    mode: "0o700"

@@ -1,0 +1,17 @@
+all:
+  hosts:
+    localhost:
+      ansible_connection: local
+      ansible_python_interpreter: auto
+  children:
+    root_ca_hosts:
+      hosts:
+        localhost:
+
+    intermediate_ca_hosts:
+      hosts:
+        localhost:
+
+    server_ca_hosts:
+      hosts:
+        localhost:

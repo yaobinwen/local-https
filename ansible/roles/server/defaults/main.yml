@@ -1,0 +1,14 @@
+pki_path: /var/lib/ywen_pki
+
+intermediate_ca_certificate_file_name: "intermediate-ca.cert.pem"
+intermediate_ca_dir_path: "{{pki_path}}/intermediate-ca"
+intermediate_ca_private_key_file_name: "intermediate-ca.key.pem"
+
+# `openssl_privatekey` module generates keys in PEM format.
+private_key_file_name: server-ca.key.pem
+private_key_size: 4096
+private_key_type: RSA
+certificate_file_name: server-ca.cert.pem
+certificate_valid_not_after: "+365d"
+certificate_valid_not_before: "+0s"
+crl_file_name: server-ca.crl.pem

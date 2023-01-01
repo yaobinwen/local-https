@@ -1,0 +1,19 @@
+- name: Set up ywen intermediate CA.
+  hosts: intermediate_ca_hosts
+  gather_facts: no
+
+  vars_prompt:
+    - name: private_key_passphrase
+      prompt: intermediate CA private key passphrase
+      private: true
+      confirm: true
+
+    - name: root_ca_private_key_passphrase
+      prompt: root CA private key passphrase
+      private: true
+      confirm: false
+
+  roles:
+    - role: intermediate-ca
+      vars:
+        pki_path: /var/lib/ywen_pki

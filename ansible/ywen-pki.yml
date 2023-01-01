@@ -1,0 +1,8 @@
+- name: Set up ywen PKI.
+  # The PKI should be set up on the hosts that host CAs because CAs are part
+  # of the PKI.
+  hosts: root_ca_hosts
+  gather_facts: no
+
+  roles:
+    - role: ywen-pki
